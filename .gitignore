@@ -1,5 +1,5 @@
 # Local .terraform directories
-**/.terraform/*
+**/.terraform*
 
 # generated via "make ci"
 examples/**/.terraform.lock.hcl
@@ -44,3 +44,4 @@ override.tf.json
 
 /.idea/
 .DS_Store
+.vscode/
