@@ -58,8 +58,20 @@ variable "lambda_triger_interval" {
   description = "The frequency at which the lambda function should trigger, in hours."
 }
 
+variable "management_account_role" {
+  type        = string
+  default     = ""
+  description = "The role ARN with `organizations:ListAccountsForParent` permissions in the AWS Organization management account."
+}
+
 variable "resource_prefix" {
   type        = string
   default     = "lacework-organization-sync"
   description = "The name prefix to use for resources provisioned by the module."
+}
+
+variable "use_assumed_role" {
+  type        = bool
+  default     = false
+  description = "Set to `true` to use an assumed role to access the AWS Organizations API in the management account."
 }

@@ -1,1 +1,1 @@
-laceworksdk~=1.0
+laceworksdk~=1.4.0

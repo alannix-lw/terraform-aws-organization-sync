@@ -9,7 +9,7 @@ A Terraform Module to periodically syncronize AWS Organizational Units with Lace
 | Name                                                                     | Version    |
 | ------------------------------------------------------------------------ | ---------- |
 | <a name="requirement_terraform"></a> [terraform](#requirement_terraform) | >= 0.12.31 |
-| <a name="requirement_lacework"></a> [lacework](#requirement_lacework)    | ~> 0.3     |
+| <a name="requirement_aws"></a> [aws](#requirement_aws)                   | ~> 4.0     |
 
 ## Providers
 
@@ -26,6 +26,7 @@ A Terraform Module to periodically syncronize AWS Organizational Units with Lace
 | [aws_cloudwatch_event_target.organization_sync](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cloudwatch_event_target)                            | resource |
 | [aws_cloudwatch_log_group.organization_sync](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cloudwatch_log_group)                                  | resource |
 | [aws_iam_role.organization_sync](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_role)                                                          | resource |
+| [aws_iam_role_policy.organization_sync_assume_role_policy](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_role_policy)                         | resource |
 | [aws_iam_role_policy.organization_sync_log_policy](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_role_policy)                                 | resource |
 | [aws_iam_role_policy.organization_sync_organization_policy](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_role_policy)                        | resource |
 | [aws_iam_role_policy.organization_sync_secret_policy](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_role_policy)                              | resource |
@@ -37,20 +38,22 @@ A Terraform Module to periodically syncronize AWS Organizational Units with Lace
 
 ## Inputs
 
-| Name                                                                                                         | Description                                                               | Type       | Default                        | Required |
-| ------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------- | ---------- | ------------------------------ | :------: |
-| <a name="input_lacework_account"></a> [lacework_account](#input_lacework_account)                            | Lacework Account (without `.lacework.net`)                                | `string`   | n/a                            |   yes    |
-| <a name="input_lacework_api_key"></a> [lacework_api_key](#input_lacework_api_key)                            | Lacework API Access Key                                                   | `string`   | n/a                            |   yes    |
-| <a name="input_lacework_api_secret"></a> [lacework_api_secret](#input_lacework_api_secret)                   | Lacework API Secret                                                       | `string`   | n/a                            |   yes    |
-| <a name="input_lacework_default_account"></a> [lacework_default_account](#input_lacework_default_account)    | The catch-all 'default' Lacework Account name to use for CloudTrail data. | `string`   | n/a                            |   yes    |
-| <a name="input_lacework_integration_guid"></a> [lacework_integration_guid](#input_lacework_integration_guid) | The GUID for the Org-level Cloudtrail integration to synchronize.         | `string`   | n/a                            |   yes    |
-| <a name="input_lacework_org_map"></a> [lacework_org_map](#input_lacework_org_map)                            | A key/value map of Lacework Account names to AWS Organization OU IDs.     | `map(any)` | n/a                            |   yes    |
-| <a name="input_lambda_function_name"></a> [lambda_function_name](#input_lambda_function_name)                | The desired name of the lambda function.                                  | `string`   | `""`                           |    no    |
-| <a name="input_lambda_log_retention"></a> [lambda_log_retention](#input_lambda_log_retention)                | The number of days in which to retain logs for the lambda function.       | `number`   | `30`                           |    no    |
-| <a name="input_lambda_role_name"></a> [lambda_role_name](#input_lambda_role_name)                            | The desired IAM role name for the Lacework remediation lambda function.   | `string`   | `""`                           |    no    |
-| <a name="input_lambda_timeout"></a> [lambda_timeout](#input_lambda_timeout)                                  | The execution timeout for the Lambda function, in seconds.                | `number`   | `15`                           |    no    |
-| <a name="input_lambda_triger_interval"></a> [lambda_triger_interval](#input_lambda_triger_interval)          | The frequency at which the lambda function should trigger, in hours.      | `number`   | `1`                            |    no    |
-| <a name="input_resource_prefix"></a> [resource_prefix](#input_resource_prefix)                               | The name prefix to use for resources provisioned by the module.           | `string`   | `"lacework-organization-sync"` |    no    |
+| Name                                                                                                         | Description                                                                                                     | Type       | Default                        | Required |
+| ------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------- | ---------- | ------------------------------ | :------: |
+| <a name="input_lacework_account"></a> [lacework_account](#input_lacework_account)                            | Lacework Account (without `.lacework.net`)                                                                      | `string`   | n/a                            |   yes    |
+| <a name="input_lacework_api_key"></a> [lacework_api_key](#input_lacework_api_key)                            | Lacework API Access Key                                                                                         | `string`   | n/a                            |   yes    |
+| <a name="input_lacework_api_secret"></a> [lacework_api_secret](#input_lacework_api_secret)                   | Lacework API Secret                                                                                             | `string`   | n/a                            |   yes    |
+| <a name="input_lacework_default_account"></a> [lacework_default_account](#input_lacework_default_account)    | The catch-all 'default' Lacework Account name to use for CloudTrail data.                                       | `string`   | n/a                            |   yes    |
+| <a name="input_lacework_integration_guid"></a> [lacework_integration_guid](#input_lacework_integration_guid) | The GUID for the Org-level Cloudtrail integration to synchronize.                                               | `string`   | n/a                            |   yes    |
+| <a name="input_lacework_org_map"></a> [lacework_org_map](#input_lacework_org_map)                            | A key/value map of Lacework Account names to AWS Organization OU IDs.                                           | `map(any)` | n/a                            |   yes    |
+| <a name="input_lambda_function_name"></a> [lambda_function_name](#input_lambda_function_name)                | The desired name of the lambda function.                                                                        | `string`   | `""`                           |    no    |
+| <a name="input_lambda_log_retention"></a> [lambda_log_retention](#input_lambda_log_retention)                | The number of days in which to retain logs for the lambda function.                                             | `number`   | `30`                           |    no    |
+| <a name="input_lambda_role_name"></a> [lambda_role_name](#input_lambda_role_name)                            | The desired IAM role name for the Lacework remediation lambda function.                                         | `string`   | `""`                           |    no    |
+| <a name="input_lambda_timeout"></a> [lambda_timeout](#input_lambda_timeout)                                  | The execution timeout for the Lambda function, in seconds.                                                      | `number`   | `15`                           |    no    |
+| <a name="input_lambda_triger_interval"></a> [lambda_triger_interval](#input_lambda_triger_interval)          | The frequency at which the lambda function should trigger, in hours.                                            | `number`   | `1`                            |    no    |
+| <a name="input_management_account_role"></a> [management_account_role](#input_management_account_role)       | The role ARN with `organizations:ListAccountsForParent` permissions in the AWS Organization management account. | `string`   | `""`                           |    no    |
+| <a name="input_resource_prefix"></a> [resource_prefix](#input_resource_prefix)                               | The name prefix to use for resources provisioned by the module.                                                 | `string`   | `"lacework-organization-sync"` |    no    |
+| <a name="input_use_assumed_role"></a> [use_assumed_role](#input_use_assumed_role)                            | Set to `true` to use an assumed role to access the AWS Organizations API in the management account.             | `bool`     | `false`                        |    no    |
 
 ## Outputs
 
