@@ -20,6 +20,7 @@ resource "aws_secretsmanager_secret_version" "organization_sync_secret_version" 
     "api_secret": "${var.lacework_api_secret}",
     "default_account": "${var.lacework_default_account}",
     "intg_guid": "${var.lacework_integration_guid}",
+    "management_account_role": "${var.management_account_role}",
     "org_map": ${jsonencode(var.lacework_org_map)}
    }
 EOF
@@ -118,6 +119,8 @@ EOF
 
 # Allow the Lambda function to query Organization resources
 resource "aws_iam_role_policy" "organization_sync_organization_policy" {
+  count = var.use_assumed_role ? 0 : 1
+
   name = "${var.resource_prefix}-organization-access"
   role = aws_iam_role.organization_sync.id
 
@@ -132,6 +135,27 @@ resource "aws_iam_role_policy" "organization_sync_organization_policy" {
       "Effect": "Allow",
       "Resource": "*",
       "Sid": "LambdaAccessOrganizations"
+    }
+  ]
+}
+EOF
+}
+
+resource "aws_iam_role_policy" "organization_sync_assume_role_policy" {
+  count = var.use_assumed_role ? 1 : 0
+
+  name = "${var.resource_prefix}-assume-role-access"
+  role = aws_iam_role.organization_sync.id
+
+  policy = <<EOF
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Action": "sts:AssumeRole",
+      "Effect": "Allow",
+      "Resource": "${var.management_account_role}",
+      "Sid": "LambdaAccessAssumeRole"
     }
   ]
 }

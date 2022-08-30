@@ -26,6 +26,7 @@ def handler(event, context):
         os.environ['LW_API_SECRET'] = config_data['api_secret']
         default_account = config_data['default_account']
         intg_guid = config_data['intg_guid']
+        management_account_role = config_data.get('management_account_role', '')
         org_map = config_data['org_map']
     except Exception as e:
         logger.error(f'Unable to parse secret data: {e}')
@@ -34,7 +35,20 @@ def handler(event, context):
 
     logger.info(org_map)
 
-    aws_account_map = build_aws_account_map(org_map)
+    if len(management_account_role) > 0:
+        sts_client = aws.client('sts')
+        role_object = sts_client.assume_role(
+            RoleArn=management_account_role,
+            RoleSessionName="OrgSyncSession"
+        )
+        assumed_role_session = boto3.Session(
+            aws_access_key_id=role_object['Credentials']['AccessKeyId'],
+            aws_secret_access_key=role_object['Credentials']['SecretAccessKey'],
+            aws_session_token=role_object['Credentials']['SessionToken']
+        )
+        aws_account_map = build_aws_account_map(assumed_role_session, org_map)
+    else:
+        aws_account_map = build_aws_account_map(aws, org_map)
     logger.info(aws_account_map)
 
     lw_account_map = build_lw_account_map(default_account, aws_account_map)
@@ -48,7 +62,7 @@ def handler(event, context):
     logger.info(response)
 
 
-def build_aws_account_map(org_map):
+def build_aws_account_map(boto_session, org_map):
     account_map = {}
 
     for lw_account, ou_list in org_map.items():
@@ -56,7 +70,7 @@ def build_aws_account_map(org_map):
         logger.info(f'Lacework Account {lw_account} / AWS Org ID {ou_list}')
         if isinstance(ou_list, list):
             for ou in ou_list:
-                accounts.update(get_aws_accounts_by_ou(ou))
+                accounts.update(get_aws_accounts_by_ou(boto_session, ou))
         else:
             logger.error('Supplied value was not a list of OUs')
         logger.info(f'Returned accounts: {accounts}')
@@ -65,10 +79,10 @@ def build_aws_account_map(org_map):
     return account_map
 
 
-def get_aws_accounts_by_ou(ou):
+def get_aws_accounts_by_ou(boto_session, ou):
     results = []
 
-    organizations = aws.client('organizations')
+    organizations = boto_session.client('organizations')
     paginator = organizations.get_paginator('list_accounts_for_parent')
     responses = paginator.paginate(
         ParentId=ou
@@ -104,8 +118,7 @@ def get_configuration_secret():
     secret_name = os.environ['LACEWORK_SECRET_ARN']
     region_name = os.environ['AWS_REGION']
 
-    session = boto3.session.Session()
-    client = session.client(
+    client = aws.client(
         service_name='secretsmanager',
         region_name=region_name,
     )
