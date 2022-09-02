@@ -1,6 +1,21 @@
 # AWS Management Account
 provider "aws" {}
 
+provider "lacework" {
+  organization = true
+}
+
+module "aws_org_cloudtrail" {
+  source  = "lacework/cloudtrail/aws"
+  version = "~> 2.0"
+
+  bucket_logs_enabled   = false
+  consolidated_trail    = true
+  is_organization_trail = true
+
+  create_lacework_integration = false
+}
+
 module "lacework_organization_sync_module" {
   source = "../.."
 
@@ -10,7 +25,10 @@ module "lacework_organization_sync_module" {
   lacework_api_secret = "<Lacework API Secret>"
 
   # Integration Configuration
-  lacework_integration_guid = "<Lacework CloudTrail Integration GUID>"
+  lacework_iam_role_arn         = module.aws_org_cloudtrail.iam_role_arn
+  lacework_iam_role_external_id = module.aws_org_cloudtrail.external_id
+  lacework_sqs_queue_url        = module.aws_org_cloudtrail.sqs_url
+
   lacework_default_account  = "<Lacework Account>"
   lacework_org_map = {
     "<Lacework Sub-Account 1>" = ["<AWS Organization OU 1>", "<AWS Organization OU 2>"],

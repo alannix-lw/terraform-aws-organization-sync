@@ -1,6 +1,7 @@
 locals {
-  lambda_function_name = length(var.lambda_function_name) > 0 ? var.lambda_function_name : "${var.resource_prefix}-function-${random_id.uniq.hex}"
-  lambda_role_name     = length(var.lambda_role_name) > 0 ? var.lambda_role_name : "${var.resource_prefix}-role-${random_id.uniq.hex}"
+  lambda_function_name      = length(var.lambda_function_name) > 0 ? var.lambda_function_name : "${var.resource_prefix}-function-${random_id.uniq.hex}"
+  lambda_role_name          = length(var.lambda_role_name) > 0 ? var.lambda_role_name : "${var.resource_prefix}-role-${random_id.uniq.hex}"
+  lacework_integration_name = length(var.lacework_integration_name) > 0 ? var.lacework_integration_name : "${var.resource_prefix}-${random_id.uniq.hex}"
 }
 
 resource "random_id" "uniq" {
@@ -19,7 +20,7 @@ resource "aws_secretsmanager_secret_version" "organization_sync_secret_version" 
     "api_key": "${var.lacework_api_key}",
     "api_secret": "${var.lacework_api_secret}",
     "default_account": "${var.lacework_default_account}",
-    "intg_guid": "${var.lacework_integration_guid}",
+    "intg_guid": "${lacework_integration_aws_ct.default.id}",
     "management_account_role": "${var.management_account_role}",
     "org_map": ${jsonencode(var.lacework_org_map)}
    }
@@ -31,6 +32,10 @@ resource "aws_cloudwatch_event_rule" "organization_sync" {
   name                = "${var.resource_prefix}-periodic-trigger-${random_id.uniq.hex}"
   schedule_expression = "rate(${var.lambda_triger_interval} hour)"
   event_bus_name      = "default"
+
+  depends_on = [
+    aws_lambda_function.organization_sync
+  ]
 }
 
 # Set the CloudWatch event target as the Lambda function
@@ -184,4 +189,27 @@ resource "aws_iam_role_policy" "organization_sync_secret_policy" {
   ]
 }
 EOF
+}
+
+resource "lacework_integration_aws_ct" "default" {
+  name      = local.lacework_integration_name
+  queue_url = var.lacework_sqs_queue_url
+  credentials {
+    role_arn    = var.lacework_iam_role_arn
+    external_id = var.lacework_iam_role_external_id
+  }
+
+  org_account_mappings {
+    default_lacework_account = var.lacework_default_account
+    mapping {
+      lacework_account = var.lacework_default_account
+      aws_accounts     = ["123456789012"]
+    }
+  }
+
+  lifecycle {
+    ignore_changes = [
+      org_account_mappings
+    ]
+  }
 }
