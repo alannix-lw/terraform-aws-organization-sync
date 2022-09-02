@@ -18,9 +18,25 @@ variable "lacework_default_account" {
   description = "The catch-all 'default' Lacework Account name to use for CloudTrail data."
 }
 
-variable "lacework_integration_guid" {
+variable "lacework_integration_name" {
   type        = string
-  description = "The GUID for the Org-level Cloudtrail integration to synchronize."
+  default     = ""
+  description = "The name of the Lacework org-level CloudTrail integration."
+}
+
+variable "lacework_iam_role_arn" {
+  type        = string
+  description = "The ARN of the IAM role to use for the Lacework org-level CloudTrail integration."
+}
+
+variable "lacework_iam_role_external_id" {
+  type        = string
+  description = "The External ID of the IAM role to use for the Lacework org-level CloudTrail integration."
+}
+
+variable "lacework_sqs_queue_url" {
+  type        = string
+  description = "The URL of the SQS queue to use for the Lacework org-level CloudTrail integration."
 }
 
 variable "lacework_org_map" {
